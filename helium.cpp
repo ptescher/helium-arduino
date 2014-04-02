@@ -128,7 +128,12 @@ void HeliumModem::spiProcessRxData(void)
                 DataUnpack *dp;
                 if (len < sizeof(AppData) + hdr->length) break;
                 dp = new DataUnpack(hdr->payload, hdr->length, hdr);
+                if (dp->goodSeq())
+                    // Sequence must increment or it's a duplicate
                 addDpq(dp);
+                else
+                    // Not going to add dp to queue, delete here
+                    delete dp;
                 len -= sizeof(AppData) + hdr->length;
             }
             break;
@@ -316,7 +321,7 @@ void HeliumModem::sendPack(DataPack *dp)
     hdr.api       = dp->api;
     hdr.action    = dp->action;
     hdr.actionset = dp->actionset;
-    hdr.sequence  = dp->sequence;
+    hdr.sequence  = dp->getSequence();
     spiSendData((u8*)&hdr, sizeof(AppData), (u8*)dp->getBuf(), hdr.length);
 }
 

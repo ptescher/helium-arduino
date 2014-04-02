@@ -35,11 +35,11 @@ class DataPack {
 
     u8 *getBuf(void)    { return mpbuf; }
     int getBufSize(void)  { return mpbufndx; }
+    u8 getSequence(void) { return sequence; }
 
     u8 api;
     u8 actionset;
     u8 action;
-    static u8 sequence;
 
  private:
     u8 *mpbuf;
@@ -47,6 +47,7 @@ class DataPack {
     u16 mpbufndx;
     void addByte(u8 b);
     void doInt(u8 type, u8 *bytes, u8 count);
+    static u8 sequence;
 };
 
 #endif

@@ -5,16 +5,34 @@
 #define swap32(x) __builtin_bswap32(x)
 #define swap64(x) __builtin_bswap64(x)
 
+u8 DataUnpack::sequence;
+
 DataUnpack::DataUnpack(u8 *buf, u16 len, AppData *appData)
 {
     inBuf = buf;
     inBufLen = len;
+    sequenceGood = 0xff; // 0xff means that we don't have a sequence yet.
 
     flags = appData->flags;
     api = appData->api;
     action = appData->action;
     actionset = appData->actionset;
+    if (sequenceGood == 0xff)
+    {
+        // New, this is first packet
+        sequenceGood = 1;
+        // Save this last sequence number
     sequence = appData->sequence;
+    }
+    else if (sequence == appData->sequence)
+        // Duplicate packet, mark as bad
+        sequenceGood = 0;
+    else
+    {
+        // Good sequence number
+        sequenceGood = 1;
+        sequence = appData->sequence;
+    }
 }
 
 /* De-serialization functions */

@@ -13,6 +13,8 @@ class DataUnpack {
  public:
     DataUnpack(u8 *buf, u16 len, AppData *appData);
 
+    u8 goodSeq(void) { return sequenceGood; }
+
     // Functions to extract data (de-serialize) from a datapack.
     // These functions return non-zero on failure
     u8   getU64(u64 *val);
@@ -34,11 +36,12 @@ class DataUnpack {
     u8  api;
     u8  action;
     u8  actionset;
-    u8  sequence;
 
  private:
     u8 *inBuf;
     u16 inBufLen;
+    u8 sequenceGood;
+    static u8 sequence;
 };
 
 #endif
