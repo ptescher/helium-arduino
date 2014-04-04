@@ -98,7 +98,7 @@ void DataPack::appendS8(s8 n)
         addByte(0xe0 + (-n));
     else
     {
-        addByte(0xde);
+        addByte(0xd0);
         addByte(n);
     }
 }

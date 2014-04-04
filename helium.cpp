@@ -316,7 +316,7 @@ void HeliumModem::sendPack(DataPack *dp)
     AppData hdr;
 
     hdr.type = APP_DATA_FRAME;
-    hdr.flags = 0;
+    hdr.flags = 0;  /// @todo add a way for user to specify flags
     hdr.length    = dp->getBufSize();
     hdr.api       = dp->api;
     hdr.action    = dp->action;

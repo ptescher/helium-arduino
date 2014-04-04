@@ -31,14 +31,145 @@ void loop (void)
     if (dp)
     {
         /******  Process input data, write your code here: ******/
-        Serial.print("Got something back!\n");
-        u8 v;
-        if (!dp->getU8(&v) &&
-            v == 44)
+        Serial.print("Got DataPack back!\n");
+        Serial.print("params = ");
+        Serial.print(dp->api);
+        Serial.print(dp->actionset);
+        Serial.println(dp->action);
+
+        for(;;)
         {
-            Serial.println("** Success!!");
+            ObjectType type = dp->getNextType();
+            switch (type)
+            {
+            case mpUnknown:
+                goto loopOut;
+                break;
+            case mpU8:
+                {
+                    u8 x;
+                    dp->getU8(&x);
+                    Serial.print("U8: ");
+                    Serial.println(x);
+                }
+                break;
+            case mpU16:
+                {
+                    u16 x;
+                    dp->getU16(&x);
+                    Serial.print("U16: ");
+                    Serial.println(x);
+                }
+                break;
+            case mpU32:
+                {
+                    u32 x;
+                    dp->getU32(&x);
+                    Serial.print("U32: ");
+                    Serial.println(x);
+                }
+                break;
+            case mpU64:
+                {
+                    u64 x;
+                    dp->getU64(&x);
+                    Serial.print("U64: ");
+                    Serial.print((u32)(x>>32), HEX);
+                    Serial.println((u32)x, HEX);
+                }
+                break;
+            case mpS8:
+                {
+                    s8 x;
+                    dp->getS8(&x);
+                    Serial.print("S8: ");
+                    Serial.println(x);
+                }
+                break;
+            case mpS16:
+                {
+                    s16 x;
+                    dp->getS16(&x);
+                    Serial.print("S16: ");
+                    Serial.println(x);
+                }
+                break;
+            case mpS32:
+                {
+                    s32 x;
+                    dp->getS32(&x);
+                    Serial.print("S32: ");
+                    Serial.println(x);
+                }
+                break;
+            case mpS64:
+                {
+                    s64 x;
+                    dp->getS64(&x);
+                    Serial.print("S64: ");
+                    Serial.print((u32)(x>>32), HEX);
+                    Serial.println((u32)x, HEX);
+                }
+                break;
+            case mpFloat:
+                {
+                    float x;
+                    dp->getFloat(&x);
+                    Serial.print("Float: ");
+                    Serial.println(x);
+                }
+                break;
+            case mpString:
+                {
+                    char str[60];
+                    dp->getString(str, 60);
+                    Serial.print("String: ");
+                    Serial.println(str);
+                }
+                break;
+            case mpBlock:
+                {
+                    u8 block[60];
+                    u16 len;
+                    u8 i;
+                    dp->getBlock(block, 60, &len);
+                    Serial.print("Block: ");
+                    for (i=0;i<len;i++)
+                        Serial.print(block[i], HEX);
+                    Serial.println("\n");
+                }
+                break;
+            case mpBool:
+                {
+                    u8 b;
+                    dp->getBool(&b);
+                    Serial.print("Bool: ");
+                    Serial.println(b);
+                }
+                break;
+            case mpArray:
+                {
+                    u16 c;
+                    dp->getArray(&c);
+                    Serial.print("Array: ");
+                    Serial.println(c);
+                }
+                break;
+            case mpMap:
+                {
+                    u16 c;
+                    dp->getMap(&c);
+                    Serial.print("Map: ");
+                    Serial.println(c);
+                }
+                break;
+            default:
+                goto loopOut;
+                break;
+            }
         }
-        Serial.println(v, HEX);
+
+    loopOut:
 
         // User MUST delete the dp object:
         delete dp;
@@ -50,25 +181,15 @@ void loop (void)
         // Wake up modem
         modem->sleepModem(1);
 
-        /*
-    u8   getU64(u64 *val);
-    u8   getS64(s64 *val);
-    u8   getU32(u32 *val);
-    u8   getS32(s32 *val);
-    u8   getU16(u16 *val);
-    u8   getS16(s16 *val);
-    u8   getU8(u8 *val);
-    u8   getS8(s8 *val);
-    u8   getString(char *str, u16 len);
-    u8   getBlock(u8 *block, u16 maxlen, u16 *len);
-    u8   getBool(u8 *val);
-    u8   getArray(u16 *count);
-    u8   getMap(u16 *count);
-        */
-
         // Send some data
-        DataPack dp(240,0,0,1);
-        dp.appendU8(44);
+        DataPack dp(240,5,6,3);
+        dp.appendS32(-4567890);
+        dp.appendArray(2);
+        dp.appendS8(-66);
+        dp.appendFloat(3.14159);
+        dp.appendMap(1);
+        dp.appendS32(-555666);
+        dp.appendS64(-111222333444555666);
         modem->sendPack(&dp);
 
         /* char msg[20]; */

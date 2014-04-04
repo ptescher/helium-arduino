@@ -56,7 +56,7 @@ u8 DataUnpack::getS64(s64 *val)
     if (inBufLen < 9)
         return 1;
     inBuf++;
-    *val = swap64(*((s64*)inBuf));
+    *val = swap64(*((u64*)inBuf));
     inBufLen -= 9;
     inBuf += 8;
     return 0;
@@ -82,9 +82,21 @@ u8 DataUnpack::getS32(s32 *val)
     if (inBufLen < 5)
         return 1;
     inBuf++;
-    *val = swap32(*((s32*)inBuf));
+    *val = swap32(*((u32*)inBuf));
     inBufLen -= 5;
     inBuf    += 4;
+    return 0;
+}
+
+u8 DataUnpack::getFloat(float *val)
+{
+    u32 *buf = (u32*)val;
+    if (*inBuf != 0xca) return 1;
+    if (inBufLen < 5) return 1;
+    inBuf++;
+    *buf = swap32(*((u32*)inBuf));
+    inBufLen -= 5;
+    inBuf += 4;
     return 0;
 }
 
@@ -108,7 +120,7 @@ u8 DataUnpack::getS16(s16 *val)
     if (inBufLen < 3)
         return 1;
     inBuf++;
-    *val = swap16(*((s16*)inBuf));
+    *val = swap16(*((u16*)inBuf));
     inBufLen -= 3;
     inBuf    += 2;
     return 0;
@@ -143,7 +155,7 @@ u8 DataUnpack::getS8(s8 *val)
     {
         if (inBufLen < 2) return 1;
         inBuf++;
-        *val = *inBuf++;
+        *val = *(s8*)inBuf++;
         inBufLen--;
     }
     else return 1;
@@ -278,4 +290,38 @@ u8 DataUnpack::getMap(u16 *count)
         return 0;
     }
     return 1;
+}
+
+// Return the type of the next object in the buffern
+ObjectType DataUnpack::getNextType(void)
+{
+    u8 b = *inBuf;
+    if (!inBufLen) return mpUnknown;
+
+    // Examine first byte
+    if (b < 0x80)           return mpU8;
+    if ((b & 0xf0) == 0x80) return mpMap;
+    if ((b & 0xf0) == 0x90) return mpArray;
+    if ((b & 0xe0) == 0xa0) return mpString;
+    if (b == 0xc2)          return mpBool;
+    if (b == 0xc3)          return mpBool;
+    if (b == 0xc4)          return mpArray;
+    if (b == 0xc5)          return mpArray;
+    if (b == 0xca)          return mpFloat;
+    if (b == 0xcc)          return mpU8;
+    if (b == 0xcd)          return mpU16;
+    if (b == 0xce)          return mpU32;
+    if (b == 0xcf)          return mpU64;
+    if (b == 0xd0)          return mpS8;
+    if (b == 0xd1)          return mpS16;
+    if (b == 0xd2)          return mpS32;
+    if (b == 0xd3)          return mpS64;
+    if (b == 0xd9)          return mpString;
+    if (b == 0xda)          return mpString;
+    if (b == 0xdb)          return mpString;
+    if (b == 0xdc)          return mpArray;
+    if (b == 0xdd)          return mpArray;
+    if (b == 0xde)          return mpArray;
+    if ((b & 0xe0) == 0xe0) return mpU8;
+    return mpUnknown;
 }

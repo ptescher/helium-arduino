@@ -9,6 +9,25 @@
 the reverse process.
  */
 
+
+typedef enum {
+    mpUnknown,
+    mpU8,
+    mpU16,
+    mpU32,
+    mpU64,
+    mpS8,
+    mpS16,
+    mpS32,
+    mpS64,
+    mpFloat,
+    mpString,
+    mpBlock,
+    mpBool,
+    mpArray,
+    mpMap,
+} ObjectType;
+
 class DataUnpack {
  public:
     DataUnpack(u8 *buf, u16 len, AppData *appData);
@@ -25,11 +44,13 @@ class DataUnpack {
     u8   getS16(s16 *val);
     u8   getU8(u8 *val);
     u8   getS8(s8 *val);
+    u8   getFloat(float *val);
     u8   getString(char *str, u16 len);
     u8   getBlock(u8 *block, u16 maxlen, u16 *len);
     u8   getBool(u8 *val);
     u8   getArray(u16 *count);
     u8   getMap(u16 *count);
+    ObjectType getNextType(void);
 
     // Metadata vars from sender's AppData frame
     u8  flags;
