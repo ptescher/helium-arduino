@@ -31,8 +31,7 @@ void loop (void)
     if (dp)
     {
         /******  Process input data, write your code here: ******/
-        Serial.print("Got DataPack back!\n");
-        Serial.print("params = ");
+        Serial.print("Got DataPack back, params = ");
         Serial.print(dp->api);
         Serial.print(dp->actionset);
         Serial.println(dp->action);
@@ -181,26 +180,42 @@ void loop (void)
         // Wake up modem
         modem->sleepModem(1);
 
+        {
         // Send some data
         DataPack dp(240,5,6,3);
-        dp.appendS32(-4567890);
-        dp.appendArray(2);
-        dp.appendS8(-66);
-        dp.appendFloat(3.14159);
-        dp.appendMap(1);
-        dp.appendS32(-555666);
-        dp.appendS64(-111222333444555666);
+        dp.appendMap(4);
+        dp.appendU64(0x1111222233334444);
+        dp.appendS64(-3);
+        dp.appendU32(0x55443322);
+        dp.appendS32(-10);
+        dp.appendU16(12345);
+        dp.appendS16(-23000);
+        dp.appendU8(250);
+        dp.appendS8(-123);
+
+        dp.appendArray(4);
+        dp.appendBool(true);
+        dp.appendBool(false);
+        dp.appendString((char*)"abcXYZ!");
+        dp.appendFloat(33.887766);
+
+        u8 block[6] = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15};
+        dp.appendBlock(block, 6);
         modem->sendPack(&dp);
+        }
 
-        /* char msg[20]; */
-        /* sprintf(msg, "Arduino seq #%d", count++); */
-        /* modem->sendDebugMsg(240, 0, 0, msg); */
+        ModemStatus *stat;
+        modem->sleep(1);
+        stat = modem->getStatus();
+        if (stat && stat->type == MODEM_STATUS_FRAME)
+            modem->sendDebugMsg(240, 0, 0, (char *)"Success - got ModemStatus Frame!");
 
-        /* ModemStatus *stat; */
-        /* modem->sleep(1); */
-        /* stat = modem->getStatus(); */
-        /* if (stat->type == MODEM_STATUS_FRAME) */
-        /*     modem->sendDebugMsg(240, 0, 0, (char *)"Success - got ModemStatus Frame!"); */
+        {
+        DataPack dp(240,5,6,2);
+        dp.appendU16(12345);
+        dp.appendU8(87);
+        modem->sendPack(&dp);
+        }
 
         // Reset time counter
         loopCtr = 0;
@@ -211,23 +226,23 @@ void loop (void)
 }
 
 
-/* void beep (float noteFrequency, long noteDuration) */
-/* { */
-/*     int x; */
-/*     // Convert the frequency to microseconds */
-/*     float microsecondsPerWave = 1000000/noteFrequency; */
-/*     // Calculate how many HIGH/LOW cycles there are per millisecond */
-/*     float millisecondsPerCycle = 1000/(microsecondsPerWave * 2); */
-/*     // Multiply noteDuration * number or cycles per millisecond */
-/*     float loopTime = noteDuration * millisecondsPerCycle; */
-/*     // Play the note for the calculated loopTime. */
-/*     for (x=0;x<loopTime;x++) */
-/*     { */
-/*         digitalWrite(SPEAKERPIN,HIGH); */
-/*         digitalWrite(SPEAKERPINOPP,LOW); */
-/*         delayMicroseconds(microsecondsPerWave); */
-/*         digitalWrite(SPEAKERPIN,LOW); */
-/*         digitalWrite(SPEAKERPINOPP,HIGH); */
-/*         delayMicroseconds(microsecondsPerWave); */
-/*     } */
-/* } */
+void beep (float noteFrequency, long noteDuration)
+{
+    int x;
+    // Convert the frequency to microseconds
+    float microsecondsPerWave = 1000000/noteFrequency;
+    // Calculate how many HIGH/LOW cycles there are per millisecond
+    float millisecondsPerCycle = 1000/(microsecondsPerWave * 2);
+    // Multiply noteDuration * number or cycles per millisecond
+    float loopTime = noteDuration * millisecondsPerCycle;
+    // Play the note for the calculated loopTime.
+    for (x=0;x<loopTime;x++)
+    {
+        digitalWrite(SPEAKERPIN,HIGH);
+        digitalWrite(SPEAKERPINOPP,LOW);
+        delayMicroseconds(microsecondsPerWave);
+        digitalWrite(SPEAKERPIN,LOW);
+        digitalWrite(SPEAKERPINOPP,HIGH);
+        delayMicroseconds(microsecondsPerWave);
+    }
+}

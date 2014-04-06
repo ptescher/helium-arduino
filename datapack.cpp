@@ -25,10 +25,10 @@ DataPack::~DataPack()
     delete mpbuf;
 }
 
-void DataPack::appendBlock(char *block, int len)
+void DataPack::appendBlock(u8 *block, u16 len)
 {
     // Add header (string object)
-    int i;
+    u16 i;
     if (len <= 31)
         addByte(0xa0 + len);
     else if (len <= 256)

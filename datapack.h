@@ -18,7 +18,7 @@ class DataPack {
     // Functions to append data (serialize) to a datapack
     void appendArray(int count);
     void appendMap(int count);
-    void appendBlock(char *block, int len);
+    void appendBlock(u8 *block, u16 len);
     void appendU64(u64 n)        { doInt(0xcf, (u8*)&n, 8); }
     void appendS64(s64 n)        { doInt(0xd3, (u8*)&n, 8); }
     void appendU32(u32 n)        { doInt(0xce, (u8*)&n, 4); }
@@ -28,7 +28,7 @@ class DataPack {
     void appendU8(u8 n);
     void appendS8(s8 n);
     void appendBool(u8 b);
-    void appendString(char *s)   { appendBlock(s, strlen(s)); }
+    void appendString(char *s)   { appendBlock((u8*)s, strlen(s)); }
     void appendFloat(float n)    { doInt(0xca, (u8*)&n, 4); }
     // On AVR, double is really a float
     void appendDouble(double n)  { doInt(0xca, (u8*)&n, 4); }

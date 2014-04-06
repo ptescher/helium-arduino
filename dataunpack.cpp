@@ -198,13 +198,14 @@ u8 DataUnpack::getBlock(u8 *block, u16 maxlen, u16 *len)
         {
             // Block with one byte of length
             u8 blen = *++inBuf;
-            if (inBufLen < (u16)blen + 1)
+            inBuf++;
+            if (inBufLen < (u16)blen + 2)
                 return 1;
             if (blen > maxlen)
                 return 1;
             memcpy(block, inBuf, blen);
             *len = blen;
-            inBufLen -= 1 + (u16)blen;
+            inBufLen -= 2 + (u16)blen;
             inBuf += blen;
         }
         break;
@@ -215,13 +216,14 @@ u8 DataUnpack::getBlock(u8 *block, u16 maxlen, u16 *len)
             u16 blen = *++inBuf;
             blen <<= 8;
             blen += *(++inBuf);
-            if (inBufLen < blen + 1)
+            inBuf++;
+            if (inBufLen < blen + 3)
                 return 1;
             if (blen > maxlen)
                 return 1;
             memcpy(block, inBuf, blen);
             *len = blen;
-            inBufLen -= blen;
+            inBufLen -= 3 + blen;
             inBuf += blen;
         }
         break;
