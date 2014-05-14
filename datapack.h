@@ -35,7 +35,7 @@ class DataPack {
 
     u8 *getBuf(void)    { return mpbuf; }
     int getBufSize(void)  { return mpbufndx; }
-    u8 getSequence(void) { return sequence; }
+    u8 getSequence(void) { return sequence++; }
 
     u8 api;
     u8 actionset;
