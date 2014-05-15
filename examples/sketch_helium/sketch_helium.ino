@@ -31,11 +31,7 @@ void loop (void)
     if (dp)
     {
         /******  Process input data, write your code here: ******/
-        Serial.print("Got DataPack back, params = ");
-        Serial.print(dp->api);
-        Serial.print(dp->actionset);
-        Serial.println(dp->action);
-
+        Serial.print("Got DataPack back, items = ");
         for(;;)
         {
             ObjectType type = dp->getNextType();
@@ -182,7 +178,7 @@ void loop (void)
 
         {
         // Send some data
-        DataPack dp(240,5,6,1);
+        DataPack dp(1);
         dp.appendString((char *)"Heliosium");
 
         /* dp.appendMap(4); */

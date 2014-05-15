@@ -4,8 +4,8 @@
 
 u8 DataPack::sequence;
 
-DataPack::DataPack(u8 api, u8 actionset, u8 action, u8 objcount, u16 size) :
-    api(api), actionset(actionset), action(action), mpbuflen(size), mpbufndx(0)
+DataPack::DataPack(u8 objcount, u16 size) :
+    mpbuflen(size), mpbufndx(0)
 {
     // Init the buffer
     mpbuf = (u8*)malloc(size);

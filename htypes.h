@@ -15,9 +15,6 @@ typedef struct
   u8  type;
   u8  flags;
   u8  length;
-  u8  api;
-  u8  action;
-  u8  actionset;
   u8  sequence;
   u8  payload[];
 }AppData;

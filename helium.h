@@ -30,7 +30,7 @@ class HeliumModem {
     void sendPack(DataPack *dp);
     void sleepModem(u8 wakeup);
     void sleep(u32 milliSeconds);
-    void sendDebugMsg(u8 api, u8 action, u8 actionset, char *msg);
+    void sendDebugMsg(char *msg);
 
  private:
     Flags flags;

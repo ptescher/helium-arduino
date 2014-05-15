@@ -318,9 +318,6 @@ void HeliumModem::sendPack(DataPack *dp)
     hdr.type = APP_DATA_FRAME;
     hdr.flags = 0;  /// @todo add a way for user to specify flags
     hdr.length    = dp->getBufSize();
-    hdr.api       = dp->api;
-    hdr.action    = dp->action;
-    hdr.actionset = dp->actionset;
     hdr.sequence  = dp->getSequence();
     spiSendData((u8*)&hdr, sizeof(AppData), (u8*)dp->getBuf(), hdr.length);
 }
@@ -349,9 +346,9 @@ void HeliumModem::sleep(u32 milliSeconds)
 }
 
 // Send a data pack with debug msg
-void HeliumModem::sendDebugMsg(u8 api, u8 action, u8 actionset, char *msg)
+void HeliumModem::sendDebugMsg(char *msg)
 {
-    DataPack dp(api, actionset, action, 1);
+    DataPack dp(1);
     dp.appendString(msg);
     sendPack(&dp);
 }

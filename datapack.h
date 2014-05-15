@@ -12,7 +12,7 @@ the reverse process.
 
 class DataPack {
  public:
-    DataPack(u8 api, u8 actionset, u8 action, u8 objcount, u16 size=DEFAULT_DP_SIZE);
+    DataPack(u8 objcount, u16 size=DEFAULT_DP_SIZE);
     ~DataPack();
 
     // Functions to append data (serialize) to a datapack
@@ -36,10 +36,6 @@ class DataPack {
     u8 *getBuf(void)    { return mpbuf; }
     int getBufSize(void)  { return mpbufndx; }
     u8 getSequence(void) { return sequence++; }
-
-    u8 api;
-    u8 actionset;
-    u8 action;
 
  private:
     u8 *mpbuf;

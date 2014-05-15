@@ -14,9 +14,6 @@ DataUnpack::DataUnpack(u8 *buf, u16 len, AppData *appData)
     sequenceGood = 0xff; // 0xff means that we don't have a sequence yet.
 
     flags = appData->flags;
-    api = appData->api;
-    action = appData->action;
-    actionset = appData->actionset;
     if (sequenceGood == 0xff)
     {
         // New, this is first packet

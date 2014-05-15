@@ -54,9 +54,6 @@ class DataUnpack {
 
     // Metadata vars from sender's AppData frame
     u8  flags;
-    u8  api;
-    u8  action;
-    u8  actionset;
 
  private:
     u8 *inBuf;
