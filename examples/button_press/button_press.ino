@@ -1,5 +1,5 @@
-#include <helium.h>
-#include <SPI.h>
+# include <helium.h>
+# include <SPI.h>
 
 //declare the helium modem
 HeliumModem *modem;
@@ -22,9 +22,8 @@ void loop(){
   buttonState = digitalRead(buttonPin);
   if (buttonState == HIGH) {
       // check if the pushbutton is pressed.
-      DataPack dp(240,196,0,1);
+      DataPack dp(1);
       dp.appendString((char*)"Button Pressed!");
       modem->sendPack(&dp);
     }
 }
-
