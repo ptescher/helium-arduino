@@ -68,7 +68,7 @@ void DataPack::appendMap(int count)
     {
         addByte(0xde);
         addByte(count >> 8);
-        addByte(count & 0xf);
+        addByte(count & 0xff);
     }
 }
 
