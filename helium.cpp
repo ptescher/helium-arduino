@@ -1,4 +1,3 @@
-#include <SPI.h>
 #include <avr/sleep.h>
 #include "helium.h"
 
@@ -10,16 +9,14 @@
  */
 
 
-#define SPI_MAGIC                0x234f6c0d
-#define SPI_DUMMY                0x66
-#define _2_SEC                   2000
+//#define _2_SEC                   2000
 #define MAX_PAYLOAD_LENGTH       64
-#define WAIT_100MS               0x30000
+//#define WAIT_100MS               0x30000
 // Set the pins used
 #define SLEEP_PIN       2    // Used to  control sleeping of modem, low=sleep
 #define MRESETPIN       7    // Used to reset radio modem.  Hold High
-#define SPIIOPIN        8    // Used to see if radio module has data for us - polled.
-#define SLAVESELECTPIN  10   // Set pin 10 as the slave select.
+#define rxPin
+#define txPin
 
 // SPI commands (Application Node to Modem
 #define CMD_GET_STATUS           0xF0   // Request modem status
@@ -32,7 +29,18 @@ typedef struct
 {
     u32  magic;       // Magic number - sync start of header
     u16   len;         // Number of bytes of payload
-} SpiFrameHdr;
+} FrameHdr;
+
+#define SOF_CHAR            (0xA3)  ///< Start-of-frame character.
+#define EOF_CHAR            (0xA4)  ///< End-of-frame character.
+#define ESC_CHAR            (0x1B)  ///< Escape char for byte stuffing
+#define SOF_ESC             (0x01)  ///< SOF escape value
+#define EOF_ESC             (0x02)  ///< EOF escape value
+#define ESC_ESC             (0x03)  ///< ESC escape value
+
+// Could use malloc() instead of static buffer
+#define PP_FRAME_SIZE (1000)
+static u8 ppPayload[PP_FRAME_SIZE];
 
 // Constructor for HeliumModem object
 HeliumModem::HeliumModem(void) : dpqCount(0)
@@ -51,36 +59,145 @@ HeliumModem::HeliumModem(void) : dpqCount(0)
     pinMode(SLEEP_PIN, OUTPUT);
     digitalWrite(SLEEP_PIN, HIGH);
 
-    // Setup radio module SPIO pin
-    pinMode(SPIIOPIN, INPUT);
-    digitalWrite(SPIIOPIN, LOW);
-
-    // Set the SLAVESELECTPIN as an output:
-    pinMode(SLAVESELECTPIN, OUTPUT);
-
-    // Setup SPI master mode
-    SPI.setDataMode(SPI_MODE0);
-    SPI.setClockDivider(SPI_CLOCK_DIV16);   //Set to 1MHz for Radio communication
-    SPI.begin();
-
-    // Try to talk to transceiver and confirm SPI comm works
-    buf[0] = CMD_GET_STATUS;
-    spiSendData(buf, 1, NULL, 0);
+    // Setup serial port
+    serport = new SoftwareSerial(rxPin, txPin);
+    serport->begin(BAUDRATE);
 }
 
 /* The main loop for the modem object.  Must be called frequently.
-   Handles SPI transfers and multi-block transfers.  Returns NULL or a
+   Handles UART transfers and multi-block transfers.  Returns NULL or a
    pointer to a received datapack object.
  */
 DataUnpack *HeliumModem::loop(void)
 {
+    u8 ch;
+    static u8  stuffed=0;
+    static u16 cnt;
+    static u8 *ptr;
+
     // Check if radio module has data for us.
-    if(digitalRead(SPIIOPIN) == 1)
+    while (serport->available())
     {
-// void beep (float noteFrequency, long noteDuration);
-//         beep(300, 50);
-        // Poll SPI
-        spiProcessRxData();
+        ch = serport->read();
+
+        // See if we're starting a new frame (in case state is incorrect)
+        if (ch == SOF_CHAR)
+        {
+            stuffed = 0;
+            ppFrame.state = sof;
+            if (ppFrame.payload)
+            {
+                //free(ppFrame.payload);
+                ppFrame.payload = 0;
+            }
+        }
+
+        // Check for stuffed char
+        if (ch == ESC_CHAR)
+        {
+            // See if we have two or more ESC's in a row
+            if (stuffed)
+                // Already unstuffing, this is two ESC_CHAR's in a row
+                // User is exiting PP mode
+                return 1;
+            // Un-stuff next char
+            stuffed = 1;
+            continue;
+        }
+
+        // Un-stuff the char
+        if (stuffed)
+        {
+            switch (ch)
+            {
+            case SOF_ESC:
+                ch = SOF_CHAR;
+                break;
+            case EOF_ESC:
+                ch = EOF_CHAR;
+                break;
+            case ESC_ESC:
+                ch = ESC_CHAR;
+                break;
+            default:
+                // Very bad, wrong char, throw out everything
+                if (ppFrame.payload)
+                {
+                    // Free the buffer
+                    //free(ppFrame.payload);
+                    ppFrame.payload = 0;
+                }
+                // Start over
+                ppFrame.state = sof;
+                break;
+            }
+            stuffed = false;
+        }
+
+        // Add a char to the frame
+        switch (ppFrame.state)
+        {
+        case sof:
+            // Waiting for sof
+            if (ch == SOF_CHAR)
+                ppFrame.state++;
+            break;
+        case len1:
+            // length low byte
+            ppFrame.length = ch;
+            ppFrame.state++;
+            break;
+        case len2:
+            // length high byte
+            ppFrame.length += ((u16)ch) << 8;
+            ppFrame.state++;
+            // Save length to count so we can count the payload as it comes
+            cnt = ppFrame.length;
+            // Allocate a buffer for payload
+            ptr = 0;
+            if (cnt)
+            {
+                if (cnt > PPFRAME_SIZE)
+                    // Too big
+                    ppFrame.state = sof;
+                else
+                    ppFrame.payload = ptr = ppPayload;;
+            }
+            else
+                // No payload, quit now
+                ppFrame.state = eof;
+            break;
+        case payload:
+            // Save the char in buffer
+            *ptr++ = ch;
+            cnt--;
+            if (!cnt)
+                // Done with payload, move on
+                ppFrame.state++;
+            break;
+        case eof:
+            if (ch == EOF_CHAR)
+            {
+                // Process this frame in application code
+                processRxData(ppFrame.payload, ppFrame.length);
+                // Clear the memory pointer
+                ppFrame.payload = 0;
+            }
+            else
+            {
+                // Oops, this isn't right, free the buffer
+                //free(ppFrame.payload);
+                ppFrame.payload = 0;
+            }
+
+            // Ready for next serial frame
+            ppFrame.state = sof;
+            // Prepare for next frame, buffer to be freed by stack
+            ppFrame.payload = 0;
+            break;
+        default:
+            break;
+        }
     }
 
     // Return data if any
@@ -92,11 +209,8 @@ DataUnpack *HeliumModem::loop(void)
     Some packets are handled here, and msgpack packages are handed off
     upstream.
 */
-void HeliumModem::spiProcessRxData(void)
+void HeliumModem::processRxData(u8 *rxbuf, u8 len)
 {
-    // Read SPI data first
-    u8 *rxbuf = spiRxData;
-    u16 len = spiGetData();
     if (!len)
         return;
 
@@ -152,126 +266,6 @@ void HeliumModem::spiProcessRxData(void)
         }
     }
     return;
-}
-
-/*
-    Sends data to the Helium Modem. This function prepares the SPI header
-    along with the type and payload. Then it sends the data via the SPI.
-
-    Param - hdr:        Pointer to the first block (probably header) to send.
-    Param - hdrlen:     Number of bytes to send for first block.
-    Param - payload:    Pointer to the data to send.
-    Param - length:     Number of bytes to send for payload.
-
-    Return:             None, radio module will respond later by setting
-                        SPIIOPIN high and the polling loop will need to
-                        act on it by calling spiGetData.
-*/
-void HeliumModem::spiSendData(u8 *hdr, u8 hdrlen, u8 *payload, u16 length)
-{
-    // Clear out the data variables.
-    SpiFrameHdr spiHeader;
-    u8 *hdrbuf = (u8*)&spiHeader;
-    u16 i;
-    memset(&spiHeader, 0, sizeof(SpiFrameHdr));
-
-    // Load the header.
-    spiHeader.magic = SPI_MAGIC;
-    spiHeader.len = length + hdrlen;
-
-    // Start SPI transmission.
-    digitalWrite(SLAVESELECTPIN,LOW);
-
-    // Need a delay for the slave to get ready.
-    delayMicroseconds(200);
-
-    // Now (this is tricky) check to see if the slave has data for us.
-    // If so, handle his transfer(s) first, then resume ours
-    while (digitalRead(SPIIOPIN) == 1)
-    {
-        // Go get Rx Data, which will reset SPIIOPIN
-        spiProcessRxData();
-        // Re-start SPI transmission.
-        digitalWrite(SLAVESELECTPIN,LOW);
-        // Need a delay for the slave to get ready.
-        delayMicroseconds(200);
-    }
-
-    // Send the spi header
-    for (i=0;i<sizeof(SpiFrameHdr);i++)
-        SPI.transfer(*hdrbuf++);
-
-    // Send the first payload (another header)
-    for(i=0; i<hdrlen; i++)
-        SPI.transfer(hdr[i]);
-
-    // Send the payload.
-    for(i=0; i<length; i++)
-        SPI.transfer(payload[i]);
-
-    // End SPI transmission.
-    digitalWrite(SLAVESELECTPIN,HIGH);
-}
-
-/**
-    This function is called when SPIIOPIN is detected high in the polling function.
-
-    Param - None:   The global array spiRxData is filled with data received
-                    from the radio.
-
-    Return - None:  The function will return if the magic number or the
-                    length are either incorrect or the message is too long.
-                    In either case the spiRxData array will be empty.
-*/
-u16 HeliumModem::spiGetData(void)
-{
-    // Get the spi header data in two stages - magic number first (4 bytes)
-    // then the 2 byte length if the magic number is right..
-    SpiFrameHdr spiHeader;
-    u16 i;
-
-    spiHeader.len = 0;
-
-    // Start SPI transmission.
-    digitalWrite(SLAVESELECTPIN,LOW);
-
-    // Make sure the received array is empty.
-    memset(spiRxData, 0, MAX_DATA_LEN);
-
-    // Need a delay for the slave to get ready.
-    delayMicroseconds(200);
-
-    // Shift in the received magic number. We get the LSB first.
-    while ((i = SPI.transfer(SPI_DUMMY)) != (SPI_MAGIC & 0xff))
-        if(digitalRead(SPIIOPIN) != 1)
-            goto spiOut;
-
-    spiHeader.magic = (u32)i;
-    spiHeader.magic |= ((u32)SPI.transfer(SPI_DUMMY) << 8);
-    spiHeader.magic |= ((u32)SPI.transfer(SPI_DUMMY) << 16);
-    spiHeader.magic |= ((u32)SPI.transfer(SPI_DUMMY) << 24);
-
-    if(SPI_MAGIC == spiHeader.magic)
-    {
-       // Get the length
-        spiHeader.len = SPI.transfer(SPI_DUMMY);
-        spiHeader.len |= ((u32)SPI.transfer(SPI_DUMMY) << 8);
-
-        // Get the rest of the data - byte [0] is the cmd.
-        if(spiHeader.len > MAX_DATA_LEN)
-        {
-            // Length too long, error.
-            spiHeader.len = 0;
-            goto spiOut;
-        }
-
-        // All clear, get the payload.
-        for(i=0; i<spiHeader.len; i++)
-            spiRxData[i] = SPI.transfer(SPI_DUMMY);
-    }
- spiOut:
-    digitalWrite(SLAVESELECTPIN,HIGH);
-    return spiHeader.len;
 }
 
 /* Provides current status of the modem and network,

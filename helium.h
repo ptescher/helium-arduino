@@ -1,10 +1,13 @@
 #ifndef HELIUM_H
 #define HELIUM_H
 
+#include <SoftwareSerial.h>
 #include "datapack.h"
 #include "dataunpack.h"
 #include "config.h"
 #include "htypes.h"
+
+#define BAUDRATE 38400
 
 typedef struct {
     u8  type;     // MODEM_STATUS_FRAME
@@ -22,6 +25,13 @@ typedef struct {
     u8 gotModemStatus:1;
 } Flags;
 
+typedef enum {sof, len1, len2, payload, eof} sstate_t;
+typedef struct {
+    sstate_t state;
+    u16 length;
+    u8  *payload;
+} PpFrame;
+
 class HeliumModem {
  public:
     HeliumModem(void);
@@ -36,10 +46,9 @@ class HeliumModem {
     Flags flags;
     ModemStatus storedModemStatus;
 
-    void spiProcessRxData(void);
-    u16  spiGetData(void);
-    void spiSendData(u8 *hdr, u8 hdrlen, u8 *payload, u16 length);
-    unsigned char spiRxData[MAX_DATA_LEN];
+    // Serial (UART) funcs and data
+    PpFrame ppFrame;
+    SoftwareSerial *serport;
 
     // DataUnpack queue, a list of received but not yet processed datapack received
     // From helium.  Not a circular queue, just shifted over each time
