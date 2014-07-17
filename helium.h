@@ -7,7 +7,7 @@
 #include "config.h"
 #include "htypes.h"
 
-#define BAUDRATE 38400
+#define BAUDRATE 9600
 
 typedef struct {
     u8  type;     // MODEM_STATUS_FRAME
@@ -49,6 +49,9 @@ class HeliumModem {
     // Serial (UART) funcs and data
     PpFrame ppFrame;
     SoftwareSerial *serport;
+    void sendData(u8 *hdr, u8 hdrLen, u8 *buf, u16 bufLen);
+    void processRxData(u8 *rxbuf, u8 len);
+    void sendStuffedChar(u8 ch);
 
     // DataUnpack queue, a list of received but not yet processed datapack received
     // From helium.  Not a circular queue, just shifted over each time

@@ -1,4 +1,6 @@
 #include <avr/sleep.h>
+#include <Arduino.h>
+#include <SoftwareSerial.h>
 #include "helium.h"
 
 
@@ -11,12 +13,12 @@
 
 //#define _2_SEC                   2000
 #define MAX_PAYLOAD_LENGTH       64
-//#define WAIT_100MS               0x30000
+#define WAIT_100MS               0x30000
 // Set the pins used
-#define SLEEP_PIN       2    // Used to  control sleeping of modem, low=sleep
-#define MRESETPIN       7    // Used to reset radio modem.  Hold High
-#define rxPin
-#define txPin
+#define SLEEP_PIN       5    // Used to  control sleeping of modem, low=sleep
+#define MRESETPIN       4    // Used to reset radio modem.  Hold High
+#define rxPin           6
+#define txPin           7
 
 // SPI commands (Application Node to Modem
 #define CMD_GET_STATUS           0xF0   // Request modem status
@@ -45,19 +47,17 @@ static u8 ppPayload[PP_FRAME_SIZE];
 // Constructor for HeliumModem object
 HeliumModem::HeliumModem(void) : dpqCount(0)
 {
-    u8 buf[3];
-
     // Zero init stuff.
     memset(&storedModemStatus, 0, sizeof(ModemStatus));
     *(u8*)&flags = 0;
 
     // Setup Module Reset Pin
     pinMode(MRESETPIN, OUTPUT);
-    digitalWrite(MRESETPIN, HIGH);
+    digitalWrite(MRESETPIN, LOW);
 
-    // Setup the Sleep pin
+    // Setup the Sleep pin (ATOM PCB sleeps when pin is HIGH)
     pinMode(SLEEP_PIN, OUTPUT);
-    digitalWrite(SLEEP_PIN, HIGH);
+    digitalWrite(SLEEP_PIN, LOW);
 
     // Setup serial port
     serport = new SoftwareSerial(rxPin, txPin);
@@ -99,7 +99,7 @@ DataUnpack *HeliumModem::loop(void)
             if (stuffed)
                 // Already unstuffing, this is two ESC_CHAR's in a row
                 // User is exiting PP mode
-                return 1;
+                return NULL;
             // Un-stuff next char
             stuffed = 1;
             continue;
@@ -140,24 +140,24 @@ DataUnpack *HeliumModem::loop(void)
         case sof:
             // Waiting for sof
             if (ch == SOF_CHAR)
-                ppFrame.state++;
+                ppFrame.state = sstate_t((int)ppFrame.state + 1);
             break;
         case len1:
             // length low byte
             ppFrame.length = ch;
-            ppFrame.state++;
+            ppFrame.state = sstate_t((int)ppFrame.state + 1);
             break;
         case len2:
             // length high byte
             ppFrame.length += ((u16)ch) << 8;
-            ppFrame.state++;
+            ppFrame.state = sstate_t((int)ppFrame.state + 1);
             // Save length to count so we can count the payload as it comes
             cnt = ppFrame.length;
             // Allocate a buffer for payload
             ptr = 0;
             if (cnt)
             {
-                if (cnt > PPFRAME_SIZE)
+                if (cnt > PP_FRAME_SIZE)
                     // Too big
                     ppFrame.state = sof;
                 else
@@ -173,7 +173,7 @@ DataUnpack *HeliumModem::loop(void)
             cnt--;
             if (!cnt)
                 // Done with payload, move on
-                ppFrame.state++;
+                ppFrame.state = sstate_t((int)ppFrame.state + 1);
             break;
         case eof:
             if (ch == EOF_CHAR)
@@ -268,6 +268,53 @@ void HeliumModem::processRxData(u8 *rxbuf, u8 len)
     return;
 }
 
+void HeliumModem::sendStuffedChar(u8 ch)
+{
+    if (ch == SOF_CHAR)
+    {
+        serport->write(ESC_CHAR);
+        serport->write(SOF_ESC);
+    }
+    else if (ch == EOF_CHAR)
+    {
+        serport->write(ESC_CHAR);
+        serport->write(EOF_ESC);
+    }
+    else if (ch == ESC_CHAR)
+    {
+        serport->write(ESC_CHAR);
+        serport->write(ESC_ESC);
+    }
+    else
+        serport->write(ch);
+}
+
+/* Send data block to modem
+
+   @param hdr Pointer to first block to send
+   @param hdrLen Size of header
+   @param buf Pointer to second block to send
+   @param bufLen Length of buf
+ */
+void HeliumModem::sendData(u8 *hdr, u8 hdrLen, u8 *buf, u16 bufLen)
+{
+    // Send via serial port
+    // Serial hdr, SOF plus length (LSB first)
+    serport->write((char)SOF_CHAR);
+    serport->write((hdrLen + bufLen) & 0xff);
+    serport->write((hdrLen + bufLen) >> 8);
+
+    // Send hdr portion of frame
+    while (hdrLen--)
+        serport->write(*hdr++);
+    // Send payload portion of frame
+    while (bufLen--)
+        serport->write(*buf++);
+
+    // Send EOF
+    serport->write((char)EOF_CHAR);
+}
+
 /* Provides current status of the modem and network,
    returns pointer to status, or NULL on error */
 ModemStatus *HeliumModem::getStatus(void)
@@ -284,20 +331,17 @@ ModemStatus *HeliumModem::getStatus(void)
 
     // Ask host for status (use stat as temporary var)
     buf = CMD_GET_STATUS;
-    spiSendData(&buf, 1, NULL, 0);
+    sendData(&buf, 1, NULL, 0);
 
     // Wait for return
     for (count=0;count<WAIT_100MS;count++)
     {
-        // Poll the SPI port
-        if(digitalRead(SPIIOPIN) == 1)
-        // Poll SPI
-            spiProcessRxData();
+        loop();
 
         if (flags.gotModemStatus)
             // New ModemStatus was received
             return &storedModemStatus;
-        }
+    }
 
     // Failed to get anything back. Return as sleeping
     flags.sleeping = 1;
@@ -313,7 +357,7 @@ void HeliumModem::sendPack(DataPack *dp)
     hdr.flags = 0;  /// @todo add a way for user to specify flags
     hdr.length    = dp->getBufSize();
     hdr.sequence  = dp->getSequence();
-    spiSendData((u8*)&hdr, sizeof(AppData), (u8*)dp->getBuf(), hdr.length);
+    sendData((u8*)&hdr, sizeof(AppData), (u8*)dp->getBuf(), hdr.length);
 }
 
 // Command the modem to sleep or wake
@@ -322,13 +366,13 @@ void HeliumModem::sleepModem(u8 wakeup)
     if (flags.sleeping && wakeup)
     {
         // Wake up
-        digitalWrite(SLEEP_PIN, HIGH);
+        digitalWrite(SLEEP_PIN, LOW);
         flags.sleeping = 0;
     }
     else if (!flags.sleeping && !wakeup)
     {
         // Put to sleep
-        digitalWrite(SLEEP_PIN, LOW);
+        digitalWrite(SLEEP_PIN, HIGH);
         flags.sleeping = 1;
     }
 }

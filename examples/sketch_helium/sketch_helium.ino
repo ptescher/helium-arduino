@@ -1,6 +1,5 @@
+#include <SoftwareSerial.h>
 #include <helium.h>
-#include <SPI.h>
-
 
 /* Enable beeper on springer PCB (use beep() func to beep): */
 #define SPEAKERPIN      5    // speaker connected to digital pin 9
