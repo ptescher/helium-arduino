@@ -87,13 +87,14 @@ u8 DataUnpack::getS32(s32 *val)
 
 u8 DataUnpack::getFloat(float *val)
 {
-    u32 *buf = (u32*)val;
+    u32 *buf;
     if (*inBuf != 0xca) return 1;
     if (inBufLen < 5) return 1;
     inBuf++;
     *buf = swap32(*((u32*)inBuf));
     inBufLen -= 5;
     inBuf += 4;
+    *val =  *((u32*)val);
     return 0;
 }
 
