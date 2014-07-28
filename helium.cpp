@@ -312,36 +312,28 @@ void HeliumModem::sendData(u8 *hdr, u8 hdrLen, u8 *buf, u16 bufLen)
     serport->write((char)EOF_CHAR);
 }
 
-/* Provides current status of the modem and network,
-   returns pointer to status, or NULL on error */
-ModemStatus *HeliumModem::getStatus(void)
+void HeliumModem::reqStatus()
 {
-    u32 count;
     u8 buf;
-
-    if (flags.sleeping)
-        // return with flags = 0 (asleep, offline)
-        return NULL;
 
     // Mark that we still need to receive ModemStatus
     flags.gotModemStatus = 0;
 
-    // Ask host for status (use stat as temporary var)
+    // Ask modem for status
     buf = CMD_GET_STATUS;
     sendData(&buf, 1, NULL, 0);
+}
 
-    // Wait for return
-    for (count=0;count<WAIT_100MS;count++)
+/* Provides current status of the modem and network,
+   returns pointer to status, or NULL on error */
+ModemStatus *HeliumModem::getStatus(void)
+{
+    if (flags.gotModemStatus)
     {
-        loop();
-
-        if (flags.gotModemStatus)
-            // New ModemStatus was received
-            return &storedModemStatus;
+        // New ModemStatus was received
+        flags.gotModemStatus = 0;
+        return &storedModemStatus;
     }
-
-    // Failed to get anything back. Return as sleeping
-    flags.sleeping = 1;
     return NULL;
 }
 

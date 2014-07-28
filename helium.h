@@ -36,6 +36,7 @@ class HeliumModem {
  public:
     HeliumModem(void);
     void loop(void);
+    void reqStatus(void);
     ModemStatus *getStatus(void);
     void sendPack(DataPack *dp);
     void sleepModem(u8 wakeup);

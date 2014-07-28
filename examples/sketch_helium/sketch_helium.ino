@@ -29,6 +29,11 @@ void loop (void)
     static u32 lastTime;
     u32 time;
     modem->loop();
+
+    ModemStatus *stat = modem->getStatus();
+    if (stat && stat->type == MODEM_STATUS_FRAME)
+        Serial.println("Success - got ModemStatus Frame!");
+
     DataUnpack *dp = modem->getDataUnpack();
     if (dp)
     {
@@ -206,12 +211,7 @@ void loop (void)
         modem->sendPack(&dp);
         }
 
-        ModemStatus *stat;
-        modem->sleep(1);
-        stat = modem->getStatus();
-        if (stat && stat->type == MODEM_STATUS_FRAME)
-            modem->sendDebugMsg((char *)"Success - got ModemStatus Frame!");
-
+        modem->reqStatus();
         /* { */
         /* DataPack dp(240,5,6,2); */
         /* dp.appendU16(12345); */
