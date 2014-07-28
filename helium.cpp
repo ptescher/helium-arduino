@@ -68,7 +68,7 @@ HeliumModem::HeliumModem(void) : dpqCount(0)
    Handles UART transfers and multi-block transfers.  Returns NULL or a
    pointer to a received datapack object.
  */
-DataUnpack *HeliumModem::loop(void)
+void HeliumModem::loop(void)
 {
     u8 ch;
     static u8  stuffed=0;
@@ -99,7 +99,7 @@ DataUnpack *HeliumModem::loop(void)
             if (stuffed)
                 // Already unstuffing, this is two ESC_CHAR's in a row
                 // User is exiting PP mode
-                return NULL;
+                return;
             // Un-stuff next char
             stuffed = 1;
             continue;
@@ -199,9 +199,6 @@ DataUnpack *HeliumModem::loop(void)
             break;
         }
     }
-
-    // Return data if any
-    return getDataUnpack();
 }
 
 /*

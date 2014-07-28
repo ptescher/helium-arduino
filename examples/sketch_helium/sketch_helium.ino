@@ -26,7 +26,10 @@ void setup(void)
 
 void loop (void)
 {
-    DataUnpack *dp = modem->loop();
+    static u32 lastTime;
+    u32 time;
+    modem->loop();
+    DataUnpack *dp = modem->getDataUnpack();
     if (dp)
     {
         /******  Process input data, write your code here: ******/
@@ -170,8 +173,10 @@ void loop (void)
     }
 
     // Send stuff to helium
-    if (loopCtr++ > 100000)
+    time = millis();
+    if (time - lastTime > 2000)
     {
+        lastTime = time;
         // Wake up modem
         modem->sleepModem(1);
 
@@ -201,11 +206,11 @@ void loop (void)
         modem->sendPack(&dp);
         }
 
-        /* ModemStatus *stat; */
-        /* modem->sleep(1); */
-        /* stat = modem->getStatus(); */
-        /* if (stat && stat->type == MODEM_STATUS_FRAME) */
-        /*     modem->sendDebugMsg(240, 0, 0, (char *)"Success - got ModemStatus Frame!"); */
+        ModemStatus *stat;
+        modem->sleep(1);
+        stat = modem->getStatus();
+        if (stat && stat->type == MODEM_STATUS_FRAME)
+            modem->sendDebugMsg((char *)"Success - got ModemStatus Frame!");
 
         /* { */
         /* DataPack dp(240,5,6,2); */
@@ -221,7 +226,6 @@ void loop (void)
         //modem->sleepModem(0);
     }
 }
-
 
 void beep (float noteFrequency, long noteDuration)
 {
