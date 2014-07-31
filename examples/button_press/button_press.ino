@@ -1,5 +1,5 @@
-# include <helium.h>
-# include <SPI.h>
+#include <SoftwareSerial.h>
+#include <helium.h>
 
 //declare the helium modem
 HeliumModem *modem;
