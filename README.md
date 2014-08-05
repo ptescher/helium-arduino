@@ -1,7 +1,11 @@
-helium-arduino
+Helium Arduino Libary 
 ==============
 
 Arduino Library For Connectivity To The Helium Platform
 
 
-[Documentation](http://arduino.docs.helium.co)
+### Resources
+
+* [Documentation](https://www.helium.co/docs/libraries/arduino/)
+* [Issues and Contributions](https://github.com/helium/helium-arduino/issues)
+* [Helium Community Forum](http://forum.helium.co) 
