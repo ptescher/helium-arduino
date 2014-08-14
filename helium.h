@@ -43,6 +43,7 @@ class HeliumModem {
     void sleep(u32 milliSeconds);
     void sendDebugMsg(char *msg);
     DataUnpack *getDataUnpack(void);
+    void listen(void) { serport->listen(); }
 
  private:
     Flags flags;

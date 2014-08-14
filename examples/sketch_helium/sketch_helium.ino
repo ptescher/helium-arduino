@@ -186,38 +186,31 @@ void loop (void)
         modem->sleepModem(1);
 
         {
-        // Send some data
-        DataPack dp(1);
-        dp.appendString((char *)"Heliosium");
+            // Send some data
+            DataPack dp(1);
+            dp.appendString((char *)"Sent from my super awesome Helium Device");
 
-        /* dp.appendMap(4); */
-        /* dp.appendU64(0x1111222233334444); */
-        /* dp.appendS64(-3); */
-        /* dp.appendU32(0x55443322); */
-        /* dp.appendS32(-10); */
-        /* dp.appendU16(12345); */
-        /* dp.appendS16(-23000); */
-        /* dp.appendU8(250); */
-        /* dp.appendS8(-123); */
+            // Uncomment this block to test various types
+            /* DataPack dp(2); */
+            /* dp.appendMap(4); */
+            /* dp.appendU64(0x1111222233334444); */
+            /* dp.appendS64(-3); */
+            /* dp.appendU32(0x55443322); */
+            /* dp.appendS32(-10); */
+            /* dp.appendU16(12345); */
+            /* dp.appendS16(-23000); */
+            /* dp.appendU8(250); */
+            /* dp.appendS8(-123); */
+            /* dp.appendArray(4); */
+            /* dp.appendBool(true); */
+            /* dp.appendBool(false); */
+            /* dp.appendString((char*)"abcXYZ!"); */
+            /* dp.appendFloat(33.887766); */
 
-        /* dp.appendArray(4); */
-        /* dp.appendBool(true); */
-        /* dp.appendBool(false); */
-        /* dp.appendString((char*)"abcXYZ!"); */
-        /* dp.appendFloat(33.887766); */
-
-        /* u8 block[6] = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15}; */
-        /* dp.appendBlock(block, 6); */
-        modem->sendPack(&dp);
+            modem->sendPack(&dp);
         }
 
         modem->reqStatus();
-        /* { */
-        /* DataPack dp(240,5,6,2); */
-        /* dp.appendU16(12345); */
-        /* dp.appendU8(87); */
-        /* modem->sendPack(&dp); */
-        /* } */
 
         // Reset time counter
         loopCtr = 0;

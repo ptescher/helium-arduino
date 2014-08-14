@@ -31,11 +31,6 @@ void DataPack::appendBlock(u8 *block, u16 len)
     u16 i;
     if (len <= 31)
         addByte(0xa0 + len);
-    else if (len <= 256)
-    {
-        addByte(0xd9);
-        addByte(len);
-    }
     else
     {
         addByte(0xda);
@@ -94,8 +89,8 @@ void DataPack::appendU8(u8 n)
 
 void DataPack::appendS8(s8 n)
 {
-    if (n < 0 && n >= -31)
-        addByte(0xe0 + (-n));
+    if (n < 0 && n >= -32)
+        addByte(n);
     else
     {
         addByte(0xd0);
