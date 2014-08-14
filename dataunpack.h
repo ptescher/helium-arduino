@@ -26,6 +26,7 @@ typedef enum {
     mpBool,
     mpArray,
     mpMap,
+    mpNil,
 } ObjectType;
 
 class DataUnpack {

@@ -19,7 +19,7 @@ DataUnpack::DataUnpack(u8 *buf, u16 len, AppData *appData)
         // New, this is first packet
         sequenceGood = 1;
         // Save this last sequence number
-    sequence = appData->sequence;
+        sequence = appData->sequence;
     }
     else if (sequence == appData->sequence)
         // Duplicate packet, mark as bad
@@ -87,13 +87,14 @@ u8 DataUnpack::getS32(s32 *val)
 
 u8 DataUnpack::getFloat(float *val)
 {
-    u32 *buf = (u32*)val;
+    u32 *buf;
     if (*inBuf != 0xca) return 1;
     if (inBufLen < 5) return 1;
     inBuf++;
     *buf = swap32(*((u32*)inBuf));
     inBufLen -= 5;
     inBuf += 4;
+    *val =  *((u32*)val);
     return 0;
 }
 
@@ -147,7 +148,7 @@ u8 DataUnpack::getS8(s8 *val)
     if (inBufLen < 1) return 1;
     if ((*inBuf & 0xe0) == 0xe0)
         // fixed 5-bit neg
-        *val = 0 - (*inBuf++ & 0x1f);
+        *val = *inBuf++;
     else if (*inBuf == 0xd0)
     {
         if (inBufLen < 2) return 1;
@@ -190,24 +191,7 @@ u8 DataUnpack::getBlock(u8 *block, u16 maxlen, u16 *len)
     if (inBufLen < 3) return 1;
     switch (*inBuf)
     {
-    case 0xd9:
-    case 0xc4:
-        {
-            // Block with one byte of length
-            u8 blen = *++inBuf;
-            inBuf++;
-            if (inBufLen < (u16)blen + 2)
-                return 1;
-            if (blen > maxlen)
-                return 1;
-            memcpy(block, inBuf, blen);
-            *len = blen;
-            inBufLen -= 2 + (u16)blen;
-            inBuf += blen;
-        }
-        break;
     case 0xda:
-    case 0xc5:
         {
             // Block with two bytes length
             u16 blen = *++inBuf;
@@ -302,10 +286,9 @@ ObjectType DataUnpack::getNextType(void)
     if ((b & 0xf0) == 0x80) return mpMap;
     if ((b & 0xf0) == 0x90) return mpArray;
     if ((b & 0xe0) == 0xa0) return mpString;
+    if (b == 0xc0)          return mpNil;
     if (b == 0xc2)          return mpBool;
     if (b == 0xc3)          return mpBool;
-    if (b == 0xc4)          return mpArray;
-    if (b == 0xc5)          return mpArray;
     if (b == 0xca)          return mpFloat;
     if (b == 0xcc)          return mpU8;
     if (b == 0xcd)          return mpU16;
@@ -315,12 +298,10 @@ ObjectType DataUnpack::getNextType(void)
     if (b == 0xd1)          return mpS16;
     if (b == 0xd2)          return mpS32;
     if (b == 0xd3)          return mpS64;
-    if (b == 0xd9)          return mpString;
     if (b == 0xda)          return mpString;
-    if (b == 0xdb)          return mpString;
     if (b == 0xdc)          return mpArray;
     if (b == 0xdd)          return mpArray;
-    if (b == 0xde)          return mpArray;
-    if ((b & 0xe0) == 0xe0) return mpU8;
+    if (b == 0xde)          return mpMap;
+    if ((b & 0xe0) == 0xe0) return mpS8;
     return mpUnknown;
 }

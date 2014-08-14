@@ -35,12 +35,15 @@ typedef struct {
 class HeliumModem {
  public:
     HeliumModem(void);
-    DataUnpack *loop(void);
+    void loop(void);
+    void reqStatus(void);
     ModemStatus *getStatus(void);
     void sendPack(DataPack *dp);
     void sleepModem(u8 wakeup);
     void sleep(u32 milliSeconds);
     void sendDebugMsg(char *msg);
+    DataUnpack *getDataUnpack(void);
+    void listen(void) { serport->listen(); }
 
  private:
     Flags flags;
@@ -60,7 +63,6 @@ class HeliumModem {
 
     //u8 dataReady(void) { return dpqCount; }
     void addDpq(DataUnpack *dp);
-    DataUnpack *getDataUnpack(void);
 };
 
 #endif

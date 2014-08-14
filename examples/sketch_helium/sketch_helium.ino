@@ -26,7 +26,15 @@ void setup(void)
 
 void loop (void)
 {
-    DataUnpack *dp = modem->loop();
+    static u32 lastTime;
+    u32 time;
+    modem->loop();
+
+    ModemStatus *stat = modem->getStatus();
+    if (stat && stat->type == MODEM_STATUS_FRAME)
+        Serial.println("Success - got ModemStatus Frame!");
+
+    DataUnpack *dp = modem->getDataUnpack();
     if (dp)
     {
         /******  Process input data, write your code here: ******/
@@ -170,49 +178,39 @@ void loop (void)
     }
 
     // Send stuff to helium
-    if (loopCtr++ > 100000)
+    time = millis();
+    if (time - lastTime > 2000)
     {
+        lastTime = time;
         // Wake up modem
         modem->sleepModem(1);
 
         {
-        // Send some data
-        DataPack dp(1);
-        dp.appendString((char *)"Heliosium");
+            // Send some data
+            DataPack dp(1);
+            dp.appendString((char *)"Sent from my super awesome Helium Device");
 
-        /* dp.appendMap(4); */
-        /* dp.appendU64(0x1111222233334444); */
-        /* dp.appendS64(-3); */
-        /* dp.appendU32(0x55443322); */
-        /* dp.appendS32(-10); */
-        /* dp.appendU16(12345); */
-        /* dp.appendS16(-23000); */
-        /* dp.appendU8(250); */
-        /* dp.appendS8(-123); */
+            // Uncomment this block to test various types
+            /* DataPack dp(2); */
+            /* dp.appendMap(4); */
+            /* dp.appendU64(0x1111222233334444); */
+            /* dp.appendS64(-3); */
+            /* dp.appendU32(0x55443322); */
+            /* dp.appendS32(-10); */
+            /* dp.appendU16(12345); */
+            /* dp.appendS16(-23000); */
+            /* dp.appendU8(250); */
+            /* dp.appendS8(-123); */
+            /* dp.appendArray(4); */
+            /* dp.appendBool(true); */
+            /* dp.appendBool(false); */
+            /* dp.appendString((char*)"abcXYZ!"); */
+            /* dp.appendFloat(33.887766); */
 
-        /* dp.appendArray(4); */
-        /* dp.appendBool(true); */
-        /* dp.appendBool(false); */
-        /* dp.appendString((char*)"abcXYZ!"); */
-        /* dp.appendFloat(33.887766); */
-
-        /* u8 block[6] = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15}; */
-        /* dp.appendBlock(block, 6); */
-        modem->sendPack(&dp);
+            modem->sendPack(&dp);
         }
 
-        /* ModemStatus *stat; */
-        /* modem->sleep(1); */
-        /* stat = modem->getStatus(); */
-        /* if (stat && stat->type == MODEM_STATUS_FRAME) */
-        /*     modem->sendDebugMsg(240, 0, 0, (char *)"Success - got ModemStatus Frame!"); */
-
-        /* { */
-        /* DataPack dp(240,5,6,2); */
-        /* dp.appendU16(12345); */
-        /* dp.appendU8(87); */
-        /* modem->sendPack(&dp); */
-        /* } */
+        modem->reqStatus();
 
         // Reset time counter
         loopCtr = 0;
@@ -221,7 +219,6 @@ void loop (void)
         //modem->sleepModem(0);
     }
 }
-
 
 void beep (float noteFrequency, long noteDuration)
 {
